@@ -1,0 +1,62 @@
+---
+title: "Prediction"
+output:
+  html_document:
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data
+
+We load the data.
+
+```{r}
+training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+testing <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+```
+
+We remove all columns that contain missing values, encoded by either NA or empty factor variables.
+The prediction is supposed to use data from accelerometers on the belt, forearm, arm, and dumbell. So we only keep those predictors.
+```{r }
+training <- training[,!apply(training,2,function(x) any(is.na(x)) | any(as.character(x) == ""))]
+
+training <- training[,grep("arm|belt|dumbbel|classe",names(training))]
+```
+
+## Training/Validation Split
+
+Test the training set into the training set used for model training and a cross validation set. We use a 80/20 split.
+```{r}
+set.seed(20)
+library(caret)
+inTrain <- createDataPartition(training$classe, p = 0.8)[[1]]
+trainingS <- training[ inTrain,]
+validationS <- training[-inTrain,]
+```
+
+## Model Training
+
+We train a SVM.
+```{r}
+library(e1071)
+model <- svm(factor(classe) ~ . , data = trainingS)
+```
+
+## Model assessment
+
+In sample confusion matrix
+```{r }
+confusionMatrix(trainingS$classe, predict(model))
+```
+
+Out of sample confusion matrix
+```{r }
+confusionMatrix(validationS$classe, predict(model,validationS))
+```
+
+The expected out of sample accuracy is 95%, the same as the cross validation accuracy.
+
+
